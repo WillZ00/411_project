@@ -7,6 +7,11 @@ import { Button } from '@mui/material';
 import TextField from '@mui/material/TextField';
 import Chip from '@mui/material/Chip';
 
+// Google OAuth
+import { gapi } from 'gapi-script';
+
+const clientId = '1012866216283-t8kasva4ua0pshbs1amkjou3farbrck9.apps.googleusercontent.com';
+
 const axios = require('axios'); // Axios stuff
 
 export default function Home() {
@@ -16,9 +21,19 @@ export default function Home() {
   const [login, setLogin] = useState(false);
 
   useEffect(() => {
-  }, [res]);
+    function initializeGoogleSignIn() {
+        gapi.load('auth2', () => {
+            gapi.auth2.init({
+                client_id: clientId,
+                scope: 'email profile'
+            });
+        });
+    }
 
-  // Reques Data
+    initializeGoogleSignIn();
+  }, [res, login]);
+
+  // Request Data
   const fetchData = (x) => {
     const params = {
       name: x,
@@ -27,17 +42,41 @@ export default function Home() {
     axios.get('http://localhost:4000/data', { params })
     .then(function (response) {
         console.log('Data fetched successfully:', response.data);
-        if (response.data === "Data Not Found!") {
-          setResult("Data Not Found!");
-          return;
+
+        // Now to Parse the data
+        let db = response.data.db;
+        let api_1 = response.data.api_1;
+        let api_2 = response.data.api_2;
+
+        let name = "N/A";
+        let rating = "N/A";
+        let production = "N/A";
+        let budget = "N/A";
+        let plot = "N/A";
+        let quote = "N/A";
+
+        if (db.data !== "Data Not Found!") {
+          name = db[0].name;
+          rating = db[0].rating;
+          production = db[0].production;
+          budget = db[0].budget;
+        }
+        if (api_1 !== "Error!") {
+          plot = api_1.Plot;
+        }
+        if (api_2 !== "Error!") {
+          quote = api_2;
         }
 
         let string_res = `
         ============= Results ============= \n
-        Movie Name: ${response.data[0].name} \n
-        Rating: ${response.data[0].rating} \n
-        Production Company: ${response.data[0].production} \n
-        Budget: ${response.data[0].budget} \n
+        Movie Name: ${name} \n
+        Rating: ${rating} \n
+        Production Company: ${production} \n
+        Budget: ${budget} \n\n
+        Plot: ${plot} \n\n
+        Quote of the Day: ${quote}\n
+
         `
         setResult(string_res);
     })
@@ -53,6 +92,18 @@ export default function Home() {
 
   }
 
+  const loginBtn = () => {
+    const auth2 = gapi.auth2.getAuthInstance();
+    auth2.signIn({
+      prompt: 'select_account'
+    }).then(googleUser => {
+        const profile = googleUser.getBasicProfile();
+        setLogin(true)
+    }).catch(err => {
+        console.log('Failed to login', err);
+    });
+  }
+
   const onTextChange = (k) => {
     setMovieName(k.target.value);
   }
@@ -64,11 +115,12 @@ export default function Home() {
           <h1 style={{width: "fit-content"}}>Movie Database 2.0!</h1>
           <h2>CS 411 Project Group 17 (Ed, Lilia, and Will)</h2>
           <div style={{flexDirection: "row", display: "flex", margin: "10px", alignItems: "center"}}>
-            <Chip style={{marginRight: "20px"}} label="Not Logged In" color="primary" />  
-            <Button variant="contained">Log-In</Button>
+            {login ? <Chip style={{marginRight: "20px"}} label="Logged In" color="success" /> : <Chip style={{marginRight: "20px"}} label="Not Logged In" color="primary" /> }
+             
+            <Button variant="contained" onClick={loginBtn}>Log-In</Button>
           </div>
         </div>
-          <TextField id="outlined-basic" label="Movie Title" onChange={onTextChange} variant="outlined" style={{width: "100%", margin: 10}} />
+          <TextField disabled={!login} id="outlined-basic" label="Movie Title" onChange={onTextChange} variant="outlined" style={{width: "100%", margin: 10}} />
           <Button onClick={onClick} variant="contained" style={{width: "10%"}}>Search!</Button>
 
           <TextField

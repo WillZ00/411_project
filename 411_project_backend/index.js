@@ -3,6 +3,7 @@ const cors = require('cors');
 const mysql = require('mysql');
 const app = express();
 const PORT = process.env.PORT || 4000;
+const axios = require('axios');
 
 // MySQL connection setup
 const db = mysql.createConnection({
@@ -28,12 +29,11 @@ app.use(express.json());
 
 // Define a route for GET requests to the home page
 app.get('/', (req, res) => {
-    res.json("Index Page");
+  res.json("Index Page");
 });
 
 // Get movie stuff
 app.get('/data', (req, res) => {
-    let movie_names = [];
     let query_movie_name = req.query.name;
     let sql_query = 
     `
@@ -42,22 +42,44 @@ app.get('/data', (req, res) => {
     WHERE M.name LIKE '${query_movie_name}'
     `
 
+    let payload = {
+      db: "",
+      api_1: "",
+      api_2: ""
+    }
+
     db.query(sql_query, (error, results, fields) => {
         if (error) {
             res.status(500).send('Failed to retrieve data');
         throw error;
         }
         if (results.length == 0) {
-            res.json("Data Not Found!");
+            payload.db = "Data Not Found!";
         } else {
-            console.log(results); // Output the result to the console
-
+            //console.log(results); // Output the result to the console [Debugging purposes]
+            payload.db = results;
             // API #1
+            axios.get(`http://www.omdbapi.com/?apikey=de4af98a&t=${query_movie_name.replace(' ', '+')}&plot=full`)
+            .then(function (response) {
+                payload.api_1 = response.data;
+            })
+            .catch(function (error) { // Error
+                console.log('Error fetching data:', error);
+                payload.api_1 = "Error!";
+            }).then(() => {
+              // API #2
+              axios.get(`https://favqs.com/api/qotd`)
+              .then(function (response) {
+                  payload.api_2 = response.data.quote.body;
 
-            // API #2
-
-            
-            res.json(results);
+                  // Send off payload after chain
+                  res.json(payload);
+              })
+              .catch(function (error) { // Error
+                  console.log('Error fetching data:', error);
+                  payload.api_1 = "Error!";
+              })
+            })   
         }
     });
 });
