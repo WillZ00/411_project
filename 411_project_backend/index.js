@@ -7,10 +7,10 @@ const axios = require('axios');
 
 // MySQL connection setup
 const db = mysql.createConnection({
-  host: 'localhost', // Replace with your host, usually localhost
-  user: 'root', // Replace with your database username
-  password: "", // Replace with your database password
-  database: '411_project' // Replace with your database name
+  host: 'localhost', 
+  user: 'root',
+  password: "", 
+  database: '411_project' 
 });
 
 // Connect to MySQL
